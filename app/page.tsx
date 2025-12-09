@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Device, Call } from '@twilio/voice-sdk';
-import { Phone, Mic, MicOff, Delete, User, Users, Hash, X, Star, Clock, Settings as SettingsIcon } from 'lucide-react';
+import { Phone, Mic, MicOff, Delete, User, Users, Hash, Star, Clock, Settings as SettingsIcon } from 'lucide-react';
 import { useContacts } from '@/hooks/useContact';
 
 interface TwilioNumber { friendlyName: string; phoneNumber: string; }
@@ -27,6 +27,7 @@ export default function WebDialer() {
   const { contacts, saveContact, deleteContact, getContactName } = useContacts();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressRef = useRef(false);
 
   // --- SETUP ---
   useEffect(() => {
@@ -72,23 +73,21 @@ export default function WebDialer() {
   const toggleMute = () => { if(currentCall) { currentCall.mute(!isMuted); setIsMuted(!isMuted); }};
   const sendDtmf = (d: string) => { setInputValue(p => p+d); currentCall?.sendDigits(d); };
   
-  // --- KEYPAD BUTTON WITH LONG PRESS FOR '+' ---
+  // --- BUTTON LOGIC ---
   const KeypadBtn = ({v,s}: {v:string, s?:string}) => {
-    const isLongPress = useRef(false);
-
     const startPress = useCallback(() => {
-      isLongPress.current = false;
+      isLongPressRef.current = false;
       if (v === '0') {
         longPressTimerRef.current = setTimeout(() => {
-          isLongPress.current = true;
+          isLongPressRef.current = true;
           sendDtmf('+');
-        }, 600); // 600ms long press for +
+        }, 600);
       }
     }, [v]);
 
     const endPress = useCallback(() => {
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-      if (!isLongPress.current) {
+      if (!isLongPressRef.current) {
         sendDtmf(v);
       }
     }, [v]);
@@ -103,6 +102,22 @@ export default function WebDialer() {
         {s && <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{s}</span>}
       </button>
     );
+  };
+
+  // Delete Button Logic (Fixed)
+  const startDelete = () => {
+    isLongPressRef.current = false;
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      setInputValue(''); // Clear all
+    }, 600);
+  };
+
+  const endDelete = () => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    if (!isLongPressRef.current) {
+      setInputValue(p => p.slice(0, -1)); // Delete one
+    }
   };
 
   // --- COMPONENTS ---
@@ -178,6 +193,7 @@ export default function WebDialer() {
                             <div onClick={() => { setInputValue(c.number); setView('dialer'); handleCall(c.number); }} className="flex-1 cursor-pointer">
                                 <div className="font-semibold text-lg">{c.name}</div><div className="text-zinc-500">{c.number}</div>
                             </div>
+                            <button onClick={() => deleteContact(c.id)} className="p-3 text-red-500 hover:bg-zinc-200 rounded-full"><Delete size={20}/></button>
                         </div>
                     ))}
                 </div>
@@ -228,7 +244,10 @@ export default function WebDialer() {
                   <button onClick={()=>handleCall()} disabled={!device||!inputValue} className="w-20 h-20 bg-green-500 active:bg-green-600 rounded-full flex items-center justify-center transition-colors shadow-md disabled:opacity-50">
                     <Phone size={40} className="fill-white text-white" />
                   </button>
-                  <button onClick={()=>setInputValue(p=>p.slice(0,-1))} onLongPress={()=>setInputValue('')} className={`w-12 flex justify-center text-zinc-400 active:text-zinc-600 transition-opacity ${!inputValue && 'opacity-0 pointer-events-none'}`}>
+                  <button 
+                    onMouseDown={startDelete} onMouseUp={endDelete} onMouseLeave={endDelete}
+                    onTouchStart={startDelete} onTouchEnd={(e) => { e.preventDefault(); endDelete(); }}
+                    className={`w-12 flex justify-center text-zinc-400 active:text-zinc-600 transition-opacity ${!inputValue && 'opacity-0 pointer-events-none'}`}>
                     <Delete size={32} strokeWidth={2.5} />
                   </button>
                 </div>
