@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Device, Call } from '@twilio/voice-sdk';
 import { Phone, Mic, MicOff, Delete, User, Users, Hash, Trash2, ArrowLeft } from 'lucide-react';
-import { useContacts } from '@/hooks/useContacts';
+import { useContacts } from '@/hooks/useContact';
 
 interface TwilioNumber { friendlyName: string; phoneNumber: string; }
 
