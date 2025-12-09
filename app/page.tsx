@@ -4,14 +4,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Device, Call } from '@twilio/voice-sdk';
 import { useContacts } from '@/hooks/useContact';
 
-// Icons need to be text/emoji to match your design exactly, 
-// or we can use the Lucide icons if you prefer. 
-// I will use text/emoji to match your HTML exactly.
-
 interface TwilioNumber { friendlyName: string; phoneNumber: string; }
 
 export default function WebDialer() {
-  // --- LOGIC STATE ---
+  // --- STATE ---
   const [device, setDevice] = useState<Device | null>(null);
   const [currentCall, setCurrentCall] = useState<Call | null>(null);
   const [callStatus, setCallStatus] = useState<'idle' | 'connecting' | 'connected'>('idle');
@@ -20,8 +16,8 @@ export default function WebDialer() {
   const [myNumbers, setMyNumbers] = useState<TwilioNumber[]>([]);
   const [selectedCallerId, setSelectedCallerId] = useState<string>('');
   
-  // UI State (Inputs)
-  const [inputValue, setInputValue] = useState(''); // The "To" number
+  // UI State
+  const [inputValue, setInputValue] = useState('');
   
   // Contacts State
   const { contacts, saveContact, deleteContact } = useContacts();
@@ -31,7 +27,7 @@ export default function WebDialer() {
   // Call UI State
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
-  const [showDialpad, setShowDialpad] = useState(false); // In-call dialpad
+  const [showDialpad, setShowDialpad] = useState(false);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -39,14 +35,23 @@ export default function WebDialer() {
   useEffect(() => {
     const setup = async () => {
       try {
+        // 1. Fetch Numbers
         const nRes = await fetch('/api/numbers');
         const nums = await nRes.json();
         if(nums.length) { setMyNumbers(nums); setSelectedCallerId(nums[0].phoneNumber); }
 
+        // 2. Fetch Token
         const tRes = await fetch('/api/token', { method: 'POST' });
         const { token } = await tRes.json();
 
-        const dev = new Device(token, { codecPreferences: [Call.Codec.Opus, Call.Codec.PCMU] });
+        // 3. Init Device (FIX: Removed restrictive CodecPreferences)
+        const dev = new Device(token, {
+            logLevel: 1, // Errors only
+            // We let Twilio decide the best audio codec (Opus/PCMU) for the network
+        });
+
+        dev.on('error', (err) => console.error("Twilio Device Error:", err));
+        
         dev.register();
         setDevice(dev);
       } catch (e) { console.error("Setup error", e); }
@@ -66,18 +71,36 @@ export default function WebDialer() {
   const makeCall = async (numberOverride?: string) => {
     const dest = numberOverride || inputValue;
     if (!device || !dest || !selectedCallerId) return;
+
     try {
       setCallStatus('connecting');
+
+      // FIX: Explicitly ask for Mic permissions immediately to "wake up" the audio context
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+
       const call = await device.connect({ params: { To: dest, callerId: selectedCallerId } });
-      call.on('accept', () => { setCallStatus('connected'); setCurrentCall(call); });
+
+      call.on('accept', () => { 
+          setCallStatus('connected'); 
+          setCurrentCall(call); 
+      });
+      
       call.on('disconnect', () => { 
           setCallStatus('idle'); 
           setCurrentCall(null); 
           setIsMuted(false); 
           setShowDialpad(false); 
       });
-      call.on('error', () => setCallStatus('idle'));
-    } catch (e) { setCallStatus('idle'); }
+
+      call.on('error', (err) => {
+          console.error("Call Error:", err);
+          setCallStatus('idle');
+      });
+
+    } catch (e) { 
+        console.error("Connection Failed:", e);
+        setCallStatus('idle'); 
+    }
   };
 
   const hangUp = () => currentCall?.disconnect();
@@ -108,7 +131,7 @@ export default function WebDialer() {
     return `${mins}:${secs}`;
   };
 
-  // --- SAFE BUTTON COMPONENT (Fixes Ghost Clicks) ---
+  // --- SAFE BUTTON (Prevents Double Clicks / Ghost Clicks) ---
   const SafeButton = ({ onClick, children, className, style }: any) => {
     const pressedRef = useRef(false);
 
@@ -144,7 +167,7 @@ export default function WebDialer() {
             <h1>Phone</h1>
         </div>
 
-        {/* --- LOADING STATE --- */}
+        {/* --- LOADING --- */}
         {!device && (
             <div className="card">
                 <div style={{textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.6)'}}>
@@ -153,7 +176,7 @@ export default function WebDialer() {
             </div>
         )}
 
-        {/* --- MAIN DIALER (Visible when Idle) --- */}
+        {/* --- IDLE SCREEN --- */}
         {device && callStatus === 'idle' && (
             <div className="animate-in fade-in">
                 
@@ -181,7 +204,7 @@ export default function WebDialer() {
                     </SafeButton>
                 </div>
 
-                {/* Save Contact Card */}
+                {/* Save Contact */}
                 <div className="card">
                     <div className="section-title">Save Contact</div>
                     <input 
@@ -201,7 +224,7 @@ export default function WebDialer() {
                     </SafeButton>
                 </div>
 
-                {/* Contacts List Card */}
+                {/* Contacts List */}
                 {contacts.length > 0 && (
                     <div className="card contacts-section">
                         <div className="section-title">Contacts</div>
@@ -228,7 +251,7 @@ export default function WebDialer() {
             </div>
         )}
 
-        {/* --- CALL INTERFACE (Visible when Calling) --- */}
+        {/* --- CALL SCREEN --- */}
         {callStatus !== 'idle' && (
             <div className="call-interface" style={{display: 'block'}}>
                 <div className="card">
