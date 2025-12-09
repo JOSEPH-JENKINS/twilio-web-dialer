@@ -3,25 +3,287 @@
 @tailwind utilities;
 
 :root {
-  /* Light Mode Variables */
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 255, 255, 255;
-  --background-end-rgb: 245, 245, 245;
+  --background-rgb: 0, 0, 0;
+  --foreground-rgb: 255, 255, 255;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      rgb(var(--background-start-rgb)),
-      rgb(var(--background-end-rgb))
-    );
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+  background: #000;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center; /* Centers the app on desktop */
 }
 
-/* Hide scrollbar */
+/* --- YOUR CUSTOM DESIGN CSS --- */
+.container-app {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.header h1 {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+select, input {
+  width: 100%;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 400;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+  display: block;
+}
+
+select:focus, input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(10, 132, 255, 0.8);
+}
+
+select option {
+  background: #1c1c1e;
+  color: #fff;
+}
+
+input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.btn {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-primary {
+  background: #0a84ff;
+  color: #fff;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+  background: #0077ed;
+}
+
+.btn-danger {
+  background: #ff3b30;
+  color: #fff;
+}
+
+.btn-danger:active {
+  transform: scale(0.98);
+  background: #ff2d22;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #0a84ff;
+  border: 1px solid rgba(10, 132, 255, 0.3);
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.call-info {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.calling-label {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 8px;
+}
+
+.call-number {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.call-duration {
+  font-size: 17px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.call-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin: 30px 0;
+}
+
+.control-btn {
+  aspect-ratio: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  color: white;
+}
+
+.control-btn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.control-btn.active {
+  background: #fff;
+  color: #000;
+}
+
+.control-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+.control-btn.active .control-label {
+    color: #000;
+}
+
+.end-call-btn {
+  width: 70px;
+  height: 70px;
+  background: #ff3b30;
+  border: none;
+  border-radius: 50%;
+  margin: 20px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white;
+}
+
+.end-call-btn:active {
+  transform: scale(0.95);
+}
+
+.dialpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.dialpad-btn {
+  aspect-ratio: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 32px;
+  font-weight: 300;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex; /* Centering fix */
+  align-items: center;
+  justify-content: center;
+}
+
+.dialpad-btn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.contact-item {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.contact-name {
+  font-size: 17px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.contact-number {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  background: rgba(10, 132, 255, 0.2);
+  border: none;
+  border-radius: 8px;
+  color: #0a84ff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
+}
+
+.icon-btn.delete {
+  background: rgba(255, 59, 48, 0.2);
+  color: #ff3b30;
+}
+
+/* Scrollbar hiding */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* Ensure clicks are quick on mobile */
-button { touch-action: manipulation; }
