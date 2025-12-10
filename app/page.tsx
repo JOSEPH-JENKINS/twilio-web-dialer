@@ -12,6 +12,9 @@ export default function WebDialer() {
   const [currentCall, setCurrentCall] = useState<Call | null>(null);
   const [callStatus, setCallStatus] = useState<'idle' | 'connecting' | 'connected'>('idle');
   
+  // Debug State
+  const [statusMsg, setStatusMsg] = useState('Initializing...');
+  
   // Data State
   const [myNumbers, setMyNumbers] = useState<TwilioNumber[]>([]);
   const [selectedCallerId, setSelectedCallerId] = useState<string>('');
@@ -35,26 +38,35 @@ export default function WebDialer() {
   useEffect(() => {
     const setup = async () => {
       try {
-        // 1. Fetch Numbers
+        setStatusMsg('Loading numbers...');
         const nRes = await fetch('/api/numbers');
         const nums = await nRes.json();
         if(nums.length) { setMyNumbers(nums); setSelectedCallerId(nums[0].phoneNumber); }
 
-        // 2. Fetch Token
+        setStatusMsg('Connecting to Twilio...');
         const tRes = await fetch('/api/token', { method: 'POST' });
         const { token } = await tRes.json();
 
-        // 3. Init Device (FIX: Removed restrictive CodecPreferences)
+        // --- NETWORK FIX: FORCE STABLE EDGES ---
         const dev = new Device(token, {
-            logLevel: 1, // Errors only
-            // We let Twilio decide the best audio codec (Opus/PCMU) for the network
+            codecPreferences: [Call.Codec.PCMU, Call.Codec.Opus],
+            // Force routing via US or Ireland (bypassing local latency checks that fail in NG)
+            edge: ['ashburn', 'dublin'], 
+            logLevel: 1 
         });
 
-        dev.on('error', (err) => console.error("Twilio Device Error:", err));
+        dev.on('ready', () => setStatusMsg('Ready to Call'));
+        dev.on('error', (err) => {
+            console.error("Twilio Device Error:", err);
+            setStatusMsg('Error: ' + err.message);
+        });
         
         dev.register();
         setDevice(dev);
-      } catch (e) { console.error("Setup error", e); }
+      } catch (e: any) { 
+          console.error("Setup error", e);
+          setStatusMsg('Setup Failed: ' + e.message);
+      }
     };
     setup();
     return () => { if (device) device.destroy(); };
@@ -74,15 +86,25 @@ export default function WebDialer() {
 
     try {
       setCallStatus('connecting');
+      setStatusMsg('Acquiring Mic...');
 
-      // FIX: Explicitly ask for Mic permissions immediately to "wake up" the audio context
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      // --- MIC FIX: SIMPLE REQUEST ---
+      // We ask for audio permissions explicitly before connecting
+      try {
+          await navigator.mediaDevices.getUserMedia({ audio: true });
+          setStatusMsg('Mic OK. Dialing...');
+      } catch (micErr) {
+          setStatusMsg('Mic Blocked! Check Browser Settings.');
+          setCallStatus('idle');
+          return;
+      }
 
       const call = await device.connect({ params: { To: dest, callerId: selectedCallerId } });
 
       call.on('accept', () => { 
           setCallStatus('connected'); 
           setCurrentCall(call); 
+          setStatusMsg('Call Active');
       });
       
       call.on('disconnect', () => { 
@@ -90,16 +112,19 @@ export default function WebDialer() {
           setCurrentCall(null); 
           setIsMuted(false); 
           setShowDialpad(false); 
+          setStatusMsg('Call Ended');
       });
 
       call.on('error', (err) => {
           console.error("Call Error:", err);
           setCallStatus('idle');
+          setStatusMsg('Call Failed: ' + err.message);
       });
 
-    } catch (e) { 
+    } catch (e: any) { 
         console.error("Connection Failed:", e);
         setCallStatus('idle'); 
+        setStatusMsg('Connection Error: ' + e.message);
     }
   };
 
@@ -131,7 +156,7 @@ export default function WebDialer() {
     return `${mins}:${secs}`;
   };
 
-  // --- SAFE BUTTON (Prevents Double Clicks / Ghost Clicks) ---
+  // --- SAFE BUTTON ---
   const SafeButton = ({ onClick, children, className, style }: any) => {
     const pressedRef = useRef(false);
 
@@ -165,22 +190,21 @@ export default function WebDialer() {
     <div className="container-app">
         <div className="header">
             <h1>Phone</h1>
+            <div style={{fontSize: '11px', color: statusMsg.includes('Error') || statusMsg.includes('Blocked') ? '#ff3b30' : 'rgba(255,255,255,0.4)', marginTop: '4px'}}>
+                {statusMsg}
+            </div>
         </div>
 
-        {/* --- LOADING --- */}
         {!device && (
             <div className="card">
                 <div style={{textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.6)'}}>
-                    Loading your phone numbers...
+                    {statusMsg}
                 </div>
             </div>
         )}
 
-        {/* --- IDLE SCREEN --- */}
         {device && callStatus === 'idle' && (
             <div className="animate-in fade-in">
-                
-                {/* Dialer Card */}
                 <div className="card">
                     <div className="section-title">From</div>
                     <select value={selectedCallerId} onChange={(e) => setSelectedCallerId(e.target.value)}>
@@ -204,7 +228,6 @@ export default function WebDialer() {
                     </SafeButton>
                 </div>
 
-                {/* Save Contact */}
                 <div className="card">
                     <div className="section-title">Save Contact</div>
                     <input 
@@ -224,7 +247,6 @@ export default function WebDialer() {
                     </SafeButton>
                 </div>
 
-                {/* Contacts List */}
                 {contacts.length > 0 && (
                     <div className="card contacts-section">
                         <div className="section-title">Contacts</div>
@@ -251,7 +273,6 @@ export default function WebDialer() {
             </div>
         )}
 
-        {/* --- CALL SCREEN --- */}
         {callStatus !== 'idle' && (
             <div className="call-interface" style={{display: 'block'}}>
                 <div className="card">
@@ -294,7 +315,6 @@ export default function WebDialer() {
                 </div>
             </div>
         )}
-
     </div>
   );
 }
